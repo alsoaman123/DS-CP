@@ -6,7 +6,7 @@
 #define MAX_DESC_LEN        256
 #define MAX_PRE_Q           3
 #define MAX_PRE_ITEMS       5
-#define MAX_QUEST_UNLOCKED  3
+#define MAX_QUEST_UNLOCKED  20
 #define MAX_LINE_LEN        1024   // buffer size for reading one line of a data file
 
 // ---------- Data file settings ----------
@@ -17,7 +17,13 @@
 #define ITEMS_TMP_FILE   "data/items.tmp"
 #define FIELD_SEP        "|"   // separates fields on one line
 #define LIST_SEP         ","   // separates ids inside a list field
-#define EMPTY_LIST_MARK  "-"   // written in place of an empty list
+#define EMPTY_LIST_MARK  "-"   // written in place of an empty list or empty text field
+
+// ---------- Line formats (the loader and the writer must both follow these) ----------
+// quests.txt : questID|questName|questDesc|rewardXP|rewardGold|minLevel|prereqQuestIDs|prereqItemIDs
+//              e.g. 5|Rescue NPC|Free the captive|200|60|3|3,4|-
+//              questUnlocked is NOT stored; it is rebuilt after loading.
+// items.txt  : itemID|itemName
 
 // Per-player state. NOT stored in QUEST or quests.txt, because the same quest
 // can be completed for one player and locked for another. player.c uses this.
