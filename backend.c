@@ -10,43 +10,258 @@
 
 int loadInventoryItems(ItemList *items)
 {
-    /* Read items.txt and build the linked list. */
+    if (items == NULL)
+        return -1;
 
+    items->head = NULL;
+    items->tail = NULL;
 
+    FILE *fp = fopen(ITEMS_FILE, "r");
 
+    if (fp == NULL) {
+        if (errno == ENOENT)
+            return 0;
+
+        perror("Error opening items file");
+        return -1;
+    }
+
+    char line[MAX_LINE_LEN];
+    int loadedCount = 0;
+
+    while (fgets(line, sizeof(line), fp) != NULL) {
+
+        /* Remove newline characters */
+        line[strcspn(line, "\r\n")] = '\0';
+
+        if (line[0] == '\0')
+            continue;
+
+        /* Split the line into item ID and item name */
+        char *separator = strchr(line, '|');
+
+        if (separator == NULL || separator == line) {
+            fprintf(stderr, "Invalid item record.\n");
+            goto load_error;
+        }
+
+        *separator = '\0';
+
+        char *idText = line;
+        char *nameText = separator + 1;
+
+        /* Validate the item ID */
+        char *end;
+        errno = 0;
+        long id = strtol(idText, &end, 10);
+
+        if (errno != 0 || *end != '\0' ||
+            id <= 0 || id > INT_MAX) {
+            fprintf(stderr, "Invalid item ID.\n");
+            goto load_error;
+        }
+
+        /* Validate the item name */
+        if (nameText[0] == '\0' ||
+            strlen(nameText) >= MAX_NAME_LEN) {
+            fprintf(stderr, "Invalid item name.\n");
+            goto load_error;
+        }
+
+        /* Check for duplicate item IDs */
+        for (ITEMS *current = items->head;
+             current != NULL;
+             current = current->next) {
+
+            if (current->itemID == (int)id) {
+                fprintf(stderr, "Duplicate item ID.\n");
+                goto load_error;
+            }
+        }
+
+        /* Create and initialize the new item node */
+        ITEMS *newItem = malloc(sizeof(ITEMS));
+
+        if (newItem == NULL) {
+            perror("Memory allocation failed");
+            goto load_error;
+        }
+
+        newItem->itemID = (int)id;
+        strcpy(newItem->itemName, nameText);
+        newItem->next = NULL;
+
+        /* Append the node to the linked list */
+        if (items->head == NULL) {
+            items->head = newItem;
+            items->tail = newItem;
+        } else {
+            items->tail->next = newItem;
+            items->tail = newItem;
+        }
+
+        loadedCount++;
+    }
+
+    if (ferror(fp)) {
+        perror("Error reading items file");
+        goto load_error;
+    }
+
+    fclose(fp);
+    return loadedCount;
+
+load_error:
+    fclose(fp);
+
+    /* Free nodes already loaded if an error occurs */
+    ITEMS *current = items->head;
+
+    while (current != NULL) {
+        ITEMS *next = current->next;
+        free(current);
+        current = next;
+    }
+
+    items->head = NULL;
+    items->tail = NULL;
+
+    return -1;
 }
 
 int createInventoryItems(ItemList *items)
 {
-    /* Get item details, create a node, and save. */
+    if (items == NULL)
+        return 0;
 
+    ITEMS *newItem = malloc(sizeof(ITEMS));
+    if (newItem == NULL) {
+        perror("Memory allocation failed");
+        return 0;
+    }
 
+    printf("\nEnter Inventory Item ID: ");
+    if (scanf("%d", &newItem->itemID) != 1 || newItem->itemID <= 0) {
+        free(newItem);
+        printf("Invalid item ID.\n");
+        return 0;
+    }
 
+    printf("Enter Inventory Item Name: ");
+    if (scanf(" %63[^\n]", newItem->itemName) != 1) {
+        free(newItem);
+        printf("Invalid item name.\n");
+        return 0;
+    }
+
+    newItem->next = NULL;
+
+    if (items->head == NULL) {
+        items->head = newItem;
+        items->tail = newItem;
+    } else {
+        items->tail->next = newItem;
+        items->tail = newItem;
+    }
+
+    return 1;
 }
 
 int updateInventoryItems(const ItemList *items)
 {
-    /* Save the linked list to items.txt safely. */
+    /* TODO: Save the linked list to items.txt safely. */
+    (void)items;
+    return 0;
 }
 
 ITEMS *findItemByID(const ItemList *items, int id)
 {
     /* Search for an item by ID. */
+
+    if (items == NULL)
+        return NULL;
+
+    ITEMS *temp = items->head;
+    int flag = 0;
+
+    while(temp != NULL){
+
+        if(temp -> itemID == id){
+            printf("Item Found!\n");
+            printf("Item ID : %d", (temp -> itemID));
+            printf("Item Name : %s", (temp -> itemName));
+            flag = 1;
+            break;
+        }
+
+        temp = temp -> next;
+
+    }
+
+    if(flag == 0){
+        printf("Item Not Found!\n");
+        return NULL;
+    }
+    else{
+        return temp;
+    }
+
 }
 
 void viewInventoryItems(const ItemList *items)
 {
     /* Display all inventory items. */
+
+    if (items == NULL)
+        return;
+
+    ITEMS *temp = items -> head;
+
+    while(temp != NULL){
+        printf("Item ID : %d\n", (temp -> itemID));
+        printf("Item Name : %s\n", (temp -> itemName));
+        printf("\n");
+
+        temp = temp -> next;
+    }
+
 }
 
-void getItemName(const ItemList *items, int itemID, char *itemName)
+void getItemName(const ItemList *items, int ID, char *itemName)
 {
-    /* Look up an item's name using its ID. */
+    if (itemName == NULL)
+        return;
+
+    itemName[0] = '\0';
+    if (items == NULL)
+        return;
+
+    ITEMS *temp = items->head;
+    while (temp != NULL) {
+        if (temp->itemID == ID) {
+            strcpy(itemName, temp->itemName);
+            return;
+        }
+        temp = temp->next;
+    }
+
+    strcpy(itemName, "Unknown item");
 }
 
 void freeInventoryItems(ItemList *items)
 {
-    /* Release allocated inventory nodes. */
+    if (items == NULL)
+        return;
+
+    ITEMS *current = items->head;
+    while (current != NULL) {
+        ITEMS *next = current->next;
+        free(current);
+        current = next;
+    }
+
+    items->head = NULL;
+    items->tail = NULL;
 }
 
 
@@ -254,91 +469,103 @@ int getQuestsInMemory(QuestList *quests)
     return loadedCount;
 }
 
-int addQuest(QuestList *quests, const ItemList *items){
+int addQuest(QuestList *quests, const ItemList *items)
+{
+    (void)items; /* Reserved for validating prerequisite item IDs. */
 
-    int i;
-    QUEST *new = malloc(sizeof(QUEST));
+    if (quests == NULL)
+        return 0;
 
-    printf("Enter Quest ID : ");
-    scanf("%d", &(new -> questID));
-    printf("\n");
-
-    printf("Enter Quest Name : ");
-    gets( (new -> questName ));
-    printf("\n");
-
-    printf("Enter Quest Description : ");
-    gets( (new -> questDesc ));
-    printf("\n");
-
-    printf("Enter Reward XP for Quest : ");
-    scanf("%d", &(new -> rewardXP));
-
-    printf("Enter Reward Gold for Quest : ");
-    scanf("%d", &(new -> rewardGold));
-
-    printf("Enter minimum level for Quest : ");
-    scanf("%d", &(new -> minLevel));
-
-    int count = 0;
-
-    printf("Enter number of prerequisite quests (max = %d): ", MAX_PRE_Q);
-    scanf("%d", &count);
-    (new -> prerequisiteQuestID_count) = count;
-
-    if(count > MAX_PRE_Q){
-        printf("Error: Maximum number of prerequisite quests exceeded.\n");
+    QUEST *newQuest = calloc(1, sizeof(QUEST));
+    if (newQuest == NULL) {
+        perror("Memory allocation failed");
         return 0;
     }
 
-    for(i = 0; i < count; i++){
+    printf("Enter Quest ID: ");
+    if (scanf("%d", &newQuest->questID) != 1 || newQuest->questID <= 0)
+        goto input_error;
+
+    /* Reject duplicate quest IDs. */
+    for (QUEST *current = quests->head; current != NULL; current = current->next) {
+        if (current->questID == newQuest->questID) {
+            printf("A quest with this ID already exists.\n");
+            goto input_error;
+        }
+    }
+
+    printf("Enter Quest Name: ");
+    if (scanf(" %63[^\n]", newQuest->questName) != 1)
+        goto input_error;
+
+    printf("Enter Quest Description: ");
+    if (scanf(" %255[^\n]", newQuest->questDesc) != 1)
+        goto input_error;
+
+    printf("Enter Reward XP: ");
+    if (scanf("%d", &newQuest->rewardXP) != 1 || newQuest->rewardXP < 0)
+        goto input_error;
+
+    printf("Enter Reward Gold: ");
+    if (scanf("%d", &newQuest->rewardGold) != 1 || newQuest->rewardGold < 0)
+        goto input_error;
+
+    printf("Enter minimum level: ");
+    if (scanf("%d", &newQuest->minLevel) != 1 || newQuest->minLevel < 0)
+        goto input_error;
+
+    int count;
+    printf("Enter number of prerequisite quests (max = %d): ", MAX_PRE_Q);
+    if (scanf("%d", &count) != 1 || count < 0 || count > MAX_PRE_Q)
+        goto input_error;
+    newQuest->prerequisiteQuestID_count = count;
+
+    for (int i = 0; i < count; i++) {
         printf("Enter prerequisite quest ID %d: ", i + 1);
-        scanf("%d", &(new -> prerequisiteQuestID[i]));
+        if (scanf("%d", &newQuest->prerequisiteQuestID[i]) != 1 ||
+            newQuest->prerequisiteQuestID[i] <= 0)
+            goto input_error;
     }
 
     printf("Enter number of prerequisite items (max = %d): ", MAX_PRE_ITEMS);
-    scanf("%d", &count);
-    (new -> prerequisiteItemsID_count) = count;
-    if(count > MAX_PRE_ITEMS){
-        printf("Error: Maximum number of prerequisite items exceeded.\n");
-        return 0;
-    }
+    if (scanf("%d", &count) != 1 || count < 0 || count > MAX_PRE_ITEMS)
+        goto input_error;
+    newQuest->prerequisiteItemsID_count = count;
 
-    for(i = 0; i < count; i++){
+    for (int i = 0; i < count; i++) {
         printf("Enter prerequisite item ID %d: ", i + 1);
-        scanf("%d", &(new -> prerequisiteItemsID[i]));
+        if (scanf("%d", &newQuest->prerequisiteItemsID[i]) != 1 ||
+            newQuest->prerequisiteItemsID[i] <= 0)
+            goto input_error;
     }
 
-    printf("Enter number of quests unlocked by this quest (max = %d): ", MAX_QUEST_UNLOCKED);
-    scanf("%d", &count);
-    (new -> questUnlocked_Count) = count;
+    printf("Enter number of quests unlocked (max = %d): ", MAX_QUEST_UNLOCKED);
+    if (scanf("%d", &count) != 1 || count < 0 || count > MAX_QUEST_UNLOCKED)
+        goto input_error;
+    newQuest->questUnlocked_Count = count;
 
-    if(count > MAX_QUEST_UNLOCKED){
-        printf("Error: Maximum number of quests unlocked exceeded.\n");
-        return 0;
+    for (int i = 0; i < count; i++) {
+        printf("Enter unlocked quest ID %d: ", i + 1);
+        if (scanf("%d", &newQuest->questUnlocked[i]) != 1 ||
+            newQuest->questUnlocked[i] <= 0)
+            goto input_error;
     }
 
-    for(i = 0; i < count; i++){
-        printf("Enter quest ID unlocked by this quest %d: ", i + 1);
-        scanf("%d", &(new -> questUnlocked[i]));
-    }
+    newQuest->prev = quests->tail;
+    newQuest->next = NULL;
 
-    /* Add the new quest to the list */
-    if(quests -> head == NULL){
-        quests -> head = new;
-        quests -> tail = new;
+    if (quests->head == NULL)
+        quests->head = newQuest;
+    else
+        quests->tail->next = newQuest;
 
-        quests -> head -> prev = NULL;
-        quests -> head -> next = NULL;
-    }
-    else{
-        new -> prev = quests -> tail;
-        new -> next = NULL;
-        quests -> tail -> next = new;
+    quests->tail = newQuest;
+    return 1;
 
-        quests -> tail = new;
-    }
-
+input_error:
+    printf("Invalid input. Quest was not added.\n");
+    free(newQuest);
+    return 0;
 }
 
 static void writeIdList(FILE *fp, const int ids[], int count)
@@ -373,7 +600,7 @@ int writeQuestsInFile(const QuestList *quests){
     }
 
     /* 2. One line per quest, in list order:
-          questID|questName|questDesc|rewardXP|rewardGold|minLevel|prereqQuestIDs|prereqItemIDs */
+          questID|questName|questDesc|rewardXP|rewardGold|minLevel|prereqQuestIDs|prereqItemIDs|questUnlockedIDs */
     for (const QUEST *q = quests->head; q != NULL; q = q->next) {
         fprintf(fp, "%d" FIELD_SEP, q->questID);
         writeTextField(fp, q->questName);
@@ -386,7 +613,7 @@ int writeQuestsInFile(const QuestList *quests){
         fputs(FIELD_SEP, fp);
         writeIdList(fp, q->questUnlocked, q->questUnlocked_Count);
         fputc('\n', fp);
-        /* questUnlocked is NOT written: it is rebuilt when the file is loaded. */
+        /* questUnlocked is stored as the ninth field. */
     }
 
     /* 3. Check for write errors. fclose flushes the buffer, so check it too. */
@@ -455,9 +682,12 @@ void viewQuest(int qid, const QuestList *quests, const ItemList *items){
 
 void viewAllQuests(const QuestList *quests, const ItemList *items){
 
-    QUEST *temp = quests -> head;
+    if (quests == NULL)
+        return;
 
-    while( temp != NULL){
+    QUEST *temp = quests->head;
+
+    while (temp != NULL) {
         
         viewQuest((temp -> questID), quests, items);
         temp = temp -> next;
@@ -480,6 +710,18 @@ QUEST *findQuestByID(const QuestList *quests, int id){
 
 }
 
-void freeQuests(QuestList *quests){
+void freeQuests(QuestList *quests)
+{
+    if (quests == NULL)
+        return;
 
+    QUEST *current = quests->head;
+    while (current != NULL) {
+        QUEST *next = current->next;
+        free(current);
+        current = next;
+    }
+
+    quests->head = NULL;
+    quests->tail = NULL;
 }

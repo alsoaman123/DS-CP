@@ -93,7 +93,7 @@ void viewInventoryItems(const ItemList *items);
 
 // Copies the item's name into itemName, or "Unknown item" if the ID is not found.
 // itemName MUST point to a buffer of at least MAX_NAME_LEN bytes.
-void getItemName(const ItemList *items, int itemID, char *itemName);
+void getItemName(const ItemList *items, int ID, char *itemName);
 
 // Releases every node and resets the list to empty. Call before exiting.
 void freeInventoryItems(ItemList *items);
