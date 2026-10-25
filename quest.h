@@ -11,10 +11,10 @@
 
 // ---------- Data file settings ----------
 // Shared by every program so the loader and the writer can never disagree.
-#define QUESTS_FILE      "data/quests.txt"
-#define QUESTS_TMP_FILE  "data/quests.tmp"   // same folder as the real file so rename() works
-#define ITEMS_FILE       "data/items.txt"
-#define ITEMS_TMP_FILE   "data/items.tmp"
+#define QUESTS_FILE      "quests.txt"
+#define QUESTS_TMP_FILE  "quests.tmp"   // same folder as the real file so rename() works
+#define ITEMS_FILE       "items.txt"
+#define ITEMS_TMP_FILE   "items.tmp"
 #define FIELD_SEP        "|"   // separates fields on one line
 #define LIST_SEP         ","   // separates ids inside a list field
 #define EMPTY_LIST_MARK  "-"   // written in place of an empty list
@@ -32,7 +32,7 @@ typedef struct item {
 
 // Handle for the whole item list. Create ONE of these in main() and pass its
 // address to every item function, so changes to head/tail persist.
-typedef struct {
+typedef struct ItemList{
     ITEMS *head;
     ITEMS *tail;
 } ItemList;
@@ -55,7 +55,7 @@ typedef struct quest {
     int prerequisiteItemsID[MAX_PRE_ITEMS];
     int prerequisiteItemsID_count;
 
-    // IDs of quests this one unlocks (rebuilt after loading, not stored in the file)
+    // IDs of quests this one unlocks (rebuilt after loading, stored in the file)
     int questUnlocked[MAX_QUEST_UNLOCKED];
     int questUnlocked_Count;
 
@@ -65,7 +65,7 @@ typedef struct quest {
 } QUEST;
 
 // Handle for the whole quest list (same idea as ItemList)
-typedef struct {
+typedef struct QuestList {
     QUEST *head;
     QUEST *tail;
 } QuestList;
@@ -114,7 +114,7 @@ int addQuest(QuestList *quests, const ItemList *items);
 int writeQuestsInFile(const QuestList *quests);
 
 // Prints one quest in full (item IDs shown as names).
-void viewQuest(const QUEST *q, const ItemList *items);
+void viewQuest(int qid, const QuestList *quests, const ItemList *items);
 
 // Prints every quest in list order.
 void viewAllQuests(const QuestList *quests, const ItemList *items);
@@ -124,5 +124,8 @@ QUEST *findQuestByID(const QuestList *quests, int id);
 
 // Releases every node and resets the list to empty. Call before exiting.
 void freeQuests(QuestList *quests);
+
+void writeIdList(FILE *fp, const int ids[], int count);
+void writeTextField(FILE *fp, const char *text);
 
 #endif
