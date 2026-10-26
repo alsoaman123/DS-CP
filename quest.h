@@ -1,29 +1,32 @@
 #ifndef QUEST_H
 #define QUEST_H
 
+#include <stdio.h>
+
 // ---------- Size limits ----------
 #define MAX_NAME_LEN        64
 #define MAX_DESC_LEN        256
 #define MAX_PRE_Q           3
 #define MAX_PRE_ITEMS       5
+#define MAX_ITEMS_ADDED     5
 #define MAX_QUEST_UNLOCKED  20
 #define MAX_LINE_LEN        1024   // buffer size for reading one line of a data file
 
 // ---------- Data file settings ----------
 // Shared by every program so the loader and the writer can never disagree.
-#define QUESTS_FILE      "data/quests.txt"
-#define QUESTS_TMP_FILE  "data/quests.tmp"   // same folder as the real file so rename() works
-#define ITEMS_FILE       "data/items.txt"
-#define ITEMS_TMP_FILE   "data/items.tmp"
+#define QUESTS_FILE      "quests.txt"
+#define QUESTS_TMP_FILE  "quests.tmp"   // same folder as the real file so rename() works
+#define ITEMS_FILE       "items.txt"
+#define ITEMS_TMP_FILE   "items.tmp"
 #define FIELD_SEP        "|"   // separates fields on one line
 #define LIST_SEP         ","   // separates ids inside a list field
 #define EMPTY_LIST_MARK  "-"   // written in place of an empty list or empty text field
 
-// ---------- Line formats (the loader and the writer must both follow these) ----------
-// quests.txt : questID|questName|questDesc|rewardXP|rewardGold|minLevel|prereqQuestIDs|prereqItemIDs
-//              e.g. 5|Rescue NPC|Free the captive|200|60|3|3,4|-
-//              questUnlocked is NOT stored; it is rebuilt after loading.
-// items.txt  : itemID|itemName
+// ---------- Line formats ----------
+// quests.txt: questID|questName|questDesc|rewardXP|rewardGold|minLevel|prereqQuestIDs|prereqItemIDs|questUnlockedIDs|rewardItemIDs
+// Example: 5|Rescue NPC|Free the captive|200|60|3|3,4|-|6|1,2
+// Empty text and ID lists use "-"; unlocked quests and reward items are stored.
+// items.txt: itemID|itemName
 
 // Per-player state. NOT stored in QUEST or quests.txt, because the same quest
 // can be completed for one player and locked for another. player.c uses this.
@@ -38,7 +41,7 @@ typedef struct item {
 
 // Handle for the whole item list. Create ONE of these in main() and pass its
 // address to every item function, so changes to head/tail persist.
-typedef struct {
+typedef struct ItemList{
     ITEMS *head;
     ITEMS *tail;
 } ItemList;
@@ -61,9 +64,13 @@ typedef struct quest {
     int prerequisiteItemsID[MAX_PRE_ITEMS];
     int prerequisiteItemsID_count;
 
-    // IDs of quests this one unlocks (rebuilt after loading, not stored in the file)
+    // IDs of quests this one unlocks (stored in the file)
     int questUnlocked[MAX_QUEST_UNLOCKED];
     int questUnlocked_Count;
+
+    //Inventory Items given to user after quest Completion
+    int inventoryItemsGiven[MAX_ITEMS_ADDED];
+    int inventoryItemsGiven_count;
 
     // Display order only; this is separate from the prerequisite links above
     struct quest *prev;
@@ -71,7 +78,7 @@ typedef struct quest {
 } QUEST;
 
 // Handle for the whole quest list (same idea as ItemList)
-typedef struct {
+typedef struct QuestList {
     QUEST *head;
     QUEST *tail;
 } QuestList;
@@ -99,15 +106,14 @@ void viewInventoryItems(const ItemList *items);
 
 // Copies the item's name into itemName, or "Unknown item" if the ID is not found.
 // itemName MUST point to a buffer of at least MAX_NAME_LEN bytes.
-void getItemName(const ItemList *items, int itemID, char *itemName);
+void getItemName(const ItemList *items, int ID, char *itemName);
 
 // Releases every node and resets the list to empty. Call before exiting.
 void freeInventoryItems(ItemList *items);
 
 // ---------- Quest functions ----------
 
-// Empties the list, reads QUESTS_FILE into it, then fills each quest's questUnlocked
-// list from the prerequisite links. Run once at program start.
+// Empties the list and reads all ten fields from QUESTS_FILE. Run once at program start.
 int getQuestsInMemory(QuestList *quests);
 
 // Collects a new quest from the admin and appends it at the end of the list.
@@ -120,7 +126,7 @@ int addQuest(QuestList *quests, const ItemList *items);
 int writeQuestsInFile(const QuestList *quests);
 
 // Prints one quest in full (item IDs shown as names).
-void viewQuest(const QUEST *q, const ItemList *items);
+void viewQuest(int qid, const QuestList *quests, const ItemList *items);
 
 // Prints every quest in list order.
 void viewAllQuests(const QuestList *quests, const ItemList *items);
@@ -129,6 +135,6 @@ void viewAllQuests(const QuestList *quests, const ItemList *items);
 QUEST *findQuestByID(const QuestList *quests, int id);
 
 // Releases every node and resets the list to empty. Call before exiting.
-void freeQuests(QuestList *quests);
+void freeQuests(QuestList *quests); 
 
 #endif
