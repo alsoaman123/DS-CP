@@ -1,11 +1,14 @@
 #ifndef QUEST_H
 #define QUEST_H
 
+#include <stdio.h>
+
 // ---------- Size limits ----------
 #define MAX_NAME_LEN        64
 #define MAX_DESC_LEN        256
 #define MAX_PRE_Q           3
 #define MAX_PRE_ITEMS       5
+#define MAX_ITEMS_ADDED     5
 #define MAX_QUEST_UNLOCKED  3
 #define MAX_LINE_LEN        1024   // buffer size for reading one line of a data file
 
@@ -58,6 +61,10 @@ typedef struct quest {
     // IDs of quests this one unlocks (rebuilt after loading, stored in the file)
     int questUnlocked[MAX_QUEST_UNLOCKED];
     int questUnlocked_Count;
+
+    //Inventory Items given to user after quest Completion
+    int inventoryItemsGiven[MAX_ITEMS_ADDED];
+    int inventoryItemsGiven_count;
 
     // Display order only; this is separate from the prerequisite links above
     struct quest *prev;
@@ -123,9 +130,6 @@ void viewAllQuests(const QuestList *quests, const ItemList *items);
 QUEST *findQuestByID(const QuestList *quests, int id);
 
 // Releases every node and resets the list to empty. Call before exiting.
-void freeQuests(QuestList *quests);
-
-void writeIdList(FILE *fp, const int ids[], int count);
-void writeTextField(FILE *fp, const char *text);
+void freeQuests(QuestList *quests); 
 
 #endif

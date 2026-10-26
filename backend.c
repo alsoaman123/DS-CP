@@ -169,9 +169,56 @@ int createInventoryItems(ItemList *items)
 
 int updateInventoryItems(const ItemList *items)
 {
-    /* TODO: Save the linked list to items.txt safely. */
-    (void)items;
-    return 0;
+    if (items == NULL)
+        return 0;
+
+    /* Write to a temporary file first to protect the original file. */
+    FILE *fp = fopen(ITEMS_TMP_FILE, "w");
+
+    if (fp == NULL) {
+        perror("Could not open temporary items file");
+        return 0;
+    }
+
+    /* Write each item as: itemID|itemName */
+    const ITEMS *current = items->head;
+
+    while (current != NULL) {
+        if (fprintf(fp, "%d|%s\n",
+                    current->itemID,
+                    current->itemName) < 0) {
+            fprintf(stderr, "Error writing inventory items.\n");
+            fclose(fp);
+            remove(ITEMS_TMP_FILE);
+            return 0;
+        }
+
+        current = current->next;
+    }
+
+    /* Check for errors while flushing and closing the file. */
+    int failed = ferror(fp);
+
+    if (fclose(fp) != 0)
+        failed = 1;
+
+    if (failed) {
+        fprintf(stderr, "Error saving inventory items.\n");
+        remove(ITEMS_TMP_FILE);
+        return 0;
+    }
+
+    /* Replace the original file with the completed temporary file. */
+#ifdef _WIN32
+    remove(ITEMS_FILE);
+#endif
+
+    if (rename(ITEMS_TMP_FILE, ITEMS_FILE) != 0) {
+        perror("Could not replace items file");
+        return 0;
+    }
+
+    return 1;
 }
 
 ITEMS *findItemByID(const ItemList *items, int id)
@@ -303,17 +350,17 @@ int getQuestsInMemory(QuestList *quests)
 
         QUEST temp = {0};
 
-        char *fields[9];
+        char *fields[10];
         int fieldCount = 0;
 
         char *token = strtok(line, FIELD_SEP);
 
-        while (token != NULL && fieldCount < 9) {
+        while (token != NULL && fieldCount < 10) {
             fields[fieldCount++] = token;
             token = strtok(NULL, FIELD_SEP);
         }
 
-        if (fieldCount != 9) {
+        if (fieldCount != 10) {
             fprintf(stderr, "Invalid quest record.\n");
             goto load_error;
         }
@@ -414,6 +461,30 @@ int getQuestsInMemory(QuestList *quests)
                     goto invalid_record;
 
                 temp.questUnlocked_Count++;
+                token = strtok(NULL, LIST_SEP);
+            }
+        }
+
+        /* Inventory Items awarded to player by this quest */
+        /* Items awarded when this quest is completed */
+        if (strcmp(fields[9], EMPTY_LIST_MARK) != 0) {
+            token = strtok(fields[9], LIST_SEP);
+
+            while (token != NULL) {
+                if (temp.inventoryItemsGiven_count >= MAX_ITEMS_ADDED)
+                    goto invalid_record;
+
+                temp.inventoryItemsGiven[
+                    temp.inventoryItemsGiven_count
+                ] = (int)strtol(token, &end, 10);
+
+                if (*end != '\0' ||
+                    temp.inventoryItemsGiven[
+                        temp.inventoryItemsGiven_count
+                    ] <= 0)
+                    goto invalid_record;
+
+                temp.inventoryItemsGiven_count++;
                 token = strtok(NULL, LIST_SEP);
             }
         }
@@ -551,6 +622,20 @@ int addQuest(QuestList *quests, const ItemList *items)
             goto input_error;
     }
 
+    printf("Enter number of reward items (max = %d): ", MAX_ITEMS_ADDED);
+
+    if (scanf("%d", &count) != 1 || count < 0 || count > MAX_ITEMS_ADDED)
+        goto input_error;
+    newQuest->inventoryItemsGiven_count = count;
+
+    for (int i = 0; i < count; i++) {
+        printf("Enter reward item ID %d: ", i + 1);
+
+        if (scanf("%d", &newQuest->inventoryItemsGiven[i]) != 1 ||
+            newQuest->inventoryItemsGiven[i] <= 0)
+            goto input_error;
+    }
+
     newQuest->prev = quests->tail;
     newQuest->next = NULL;
 
@@ -612,6 +697,8 @@ int writeQuestsInFile(const QuestList *quests){
         writeIdList(fp, q->prerequisiteItemsID, q->prerequisiteItemsID_count);
         fputs(FIELD_SEP, fp);
         writeIdList(fp, q->questUnlocked, q->questUnlocked_Count);
+        fputs(FIELD_SEP, fp);
+        writeIdList(fp, q->inventoryItemsGiven, q->inventoryItemsGiven_count);
         fputc('\n', fp);
         /* questUnlocked is stored as the ninth field. */
     }
@@ -676,6 +763,16 @@ void viewQuest(int qid, const QuestList *quests, const ItemList *items){
     for(i = 0; i < ( q -> questUnlocked_Count ); i++){
         printf("%d\t", (q -> questUnlocked[i]));
     }
+    printf("\n");
+    
+    printf("Items Awarded on Completion: ");
+    for (i = 0; i < q->inventoryItemsGiven_count; i++) {
+        char name[MAX_NAME_LEN];
+
+        getItemName(items, q->inventoryItemsGiven[i], name);
+        printf("%s\t", name);
+    }
+
     printf("\n\n");
 
 }
