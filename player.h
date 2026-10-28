@@ -16,7 +16,7 @@
 #define PLAYER_TMP_FILE "players.tmp"
 
 
-int QUEST_COUNT; //when getQuestInMemory called, this is updated and used for new player and where necessary;
+extern int QUEST_COUNT; //when getQuestInMemory called, this is updated and used for new player and where necessary;
 
 // ------- Player Structure ---------
 typedef struct player {
@@ -86,7 +86,7 @@ void addCurrentPlayerInMemory(PlayerList *player, PLAYER *current);
 Will initialise a new player with necessary fields.
 addCurrentPlayerInMmemory will be called when this new player wants to exit.
 */
-void newPlayer(PLAYER *current);
+void newPlayer(PLAYER *current, PQS_List *pqs_list, QuestList *quests);
 
 /*
 Will create SLL in sequence of quests DLL (created from getQuestInMemory from quest.h) and 
@@ -101,7 +101,7 @@ void generatePlayerQuestList(PLAYER *current, PQS_List *pqs_list, QuestList *que
 Called at start of users playing and everytime he completes a quest.
 Will show player XP, LEVEL, GOLD, Inventory Items and next available quest.
 */
-void showPlayerData(PLAYER *current, PQS_List *pqs_list);
+void showPlayerData(PLAYER *current, PQS_List *pqs_list, const ItemList *items);
 
 /*
 Called when player wants to start next quest as per his available quests. 
