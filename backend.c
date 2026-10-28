@@ -653,7 +653,6 @@ input_error:
     return 0;
 }
 
-/* Writes one list of IDs, or "-" if the list is empty. */
 static void writeIdList(FILE *fp, const int ids[], int count)
 {
     if (count == 0) {
@@ -673,8 +672,7 @@ static void writeTextField(FILE *fp, const char *text)
     fputs(text[0] == '\0' ? EMPTY_LIST_MARK : text, fp);
 }
 
-int writeQuestsInFile(const QuestList *quests)
-{
+int writeQuestsInFile(const QuestList *quests){
 
     if (quests == NULL)
         return 0;
@@ -687,7 +685,7 @@ int writeQuestsInFile(const QuestList *quests)
     }
 
     /* 2. One line per quest, in list order:
-          questID|questName|questDesc|rewardXP|rewardGold|minLevel|prereqQuestIDs|prereqItemIDs|questUnlockedIDs|rewardItemIDs */
+          questID|questName|questDesc|rewardXP|rewardGold|minLevel|prereqQuestIDs|prereqItemIDs|questUnlockedIDs */
     for (const QUEST *q = quests->head; q != NULL; q = q->next) {
         fprintf(fp, "%d" FIELD_SEP, q->questID);
         writeTextField(fp, q->questName);

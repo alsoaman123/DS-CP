@@ -9,7 +9,7 @@
 #define MAX_PRE_Q           3
 #define MAX_PRE_ITEMS       5
 #define MAX_ITEMS_ADDED     5
-#define MAX_QUEST_UNLOCKED  20
+#define MAX_QUEST_UNLOCKED  3
 #define MAX_LINE_LEN        1024   // buffer size for reading one line of a data file
 
 // ---------- Data file settings ----------
@@ -20,13 +20,7 @@
 #define ITEMS_TMP_FILE   "items.tmp"
 #define FIELD_SEP        "|"   // separates fields on one line
 #define LIST_SEP         ","   // separates ids inside a list field
-#define EMPTY_LIST_MARK  "-"   // written in place of an empty list or empty text field
-
-// ---------- Line formats ----------
-// quests.txt: questID|questName|questDesc|rewardXP|rewardGold|minLevel|prereqQuestIDs|prereqItemIDs|questUnlockedIDs|rewardItemIDs
-// Example: 5|Rescue NPC|Free the captive|200|60|3|3,4|-|6|1,2
-// Empty text and ID lists use "-"; unlocked quests and reward items are stored.
-// items.txt: itemID|itemName
+#define EMPTY_LIST_MARK  "-"   // written in place of an empty list
 
 // Per-player state. NOT stored in QUEST or quests.txt, because the same quest
 // can be completed for one player and locked for another. player.c uses this.
@@ -64,7 +58,7 @@ typedef struct quest {
     int prerequisiteItemsID[MAX_PRE_ITEMS];
     int prerequisiteItemsID_count;
 
-    // IDs of quests this one unlocks (stored in the file)
+    // IDs of quests this one unlocks (rebuilt after loading, stored in the file)
     int questUnlocked[MAX_QUEST_UNLOCKED];
     int questUnlocked_Count;
 
@@ -113,7 +107,8 @@ void freeInventoryItems(ItemList *items);
 
 // ---------- Quest functions ----------
 
-// Empties the list and reads all ten fields from QUESTS_FILE. Run once at program start.
+// Empties the list, reads QUESTS_FILE into it, then fills each quest's questUnlocked
+// list from the prerequisite links. Run once at program start.
 int getQuestsInMemory(QuestList *quests);
 
 // Collects a new quest from the admin and appends it at the end of the list.
